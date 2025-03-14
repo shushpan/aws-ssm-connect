@@ -6,11 +6,9 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"os/signal"
 	"runtime"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -140,33 +138,11 @@ func (a *App) Run() error {
 		cmd.Args = append(cmd.Args, "--parameters", fmt.Sprintf("command='%s'", a.config.Command))
 	}
 
-	sigChan := make(chan os.Signal, 1)
-
-	// Handle signals differently based on platform
-	if runtime.GOOS == "windows" {
-		signal.Notify(sigChan, os.Interrupt)
-	} else {
-		signal.Notify(sigChan, os.Interrupt, syscall.SIGTSTP)
-	}
-
-	done := make(chan error, 1)
-	go func() {
-		done <- cmd.Run()
-	}()
-
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	select {
-	case err := <-done:
-		return err
-	case sig := <-sigChan:
-		if err := cmd.Process.Signal(sig); err != nil {
-			fmt.Fprintf(os.Stderr, "Error sending signal %v: %v\n", sig, err)
-		}
-		return cmd.Wait()
-	}
+	return cmd.Run()
 }
 
 func (a *App) startSSOLogin(ctx context.Context, startURL, region string) (string, error) {
