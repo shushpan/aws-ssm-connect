@@ -141,7 +141,13 @@ func (a *App) Run() error {
 	}
 
 	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTSTP)
+
+	// Handle signals differently based on platform
+	if runtime.GOOS == "windows" {
+		signal.Notify(sigChan, os.Interrupt)
+	} else {
+		signal.Notify(sigChan, os.Interrupt, syscall.SIGTSTP)
+	}
 
 	done := make(chan error, 1)
 	go func() {
