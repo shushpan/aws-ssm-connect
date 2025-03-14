@@ -54,6 +54,7 @@ brews:
     repository:
       owner: shushpan
       name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     commit_author:
       name: goreleaserbot
       email: goreleaser@carlosbecker.com
