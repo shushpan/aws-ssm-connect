@@ -10,6 +10,19 @@ A CLI tool to easily connect to EC2 instances via AWS SSM with automatic SSO aut
 curl -fsSL https://raw.githubusercontent.com/shushpan/aws-ssm-connect/main/install.sh | bash
 ```
 
+### Using Homebrew (macOS)
+
+```bash
+brew install shushpan/tap/aws-ssm-connect
+```
+
+Alternatively, you can add the tap first and then install:
+
+```bash
+brew tap shushpan/tap
+brew install aws-ssm-connect
+```
+
 ### Using Go
 
 ```bash
