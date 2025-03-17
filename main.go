@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -86,6 +87,10 @@ func main() {
 				return
 			}
 
+			if !cmd.Flags().Changed("profile") {
+				profile = selectAWSProfile()
+			}
+
 			config := &Config{
 				Profile:  profile,
 				TagName:  args[0],
@@ -112,6 +117,89 @@ func main() {
 	}
 }
 
+func selectAWSProfile() string {
+	configPath := os.ExpandEnv("$HOME/.aws/config")
+	credentialsPath := os.ExpandEnv("$HOME/.aws/credentials")
+
+	profiles := []string{}
+
+	if _, err := os.Stat(configPath); err == nil {
+		awsConfig, err := ini.Load(configPath)
+		if err == nil {
+			for _, section := range awsConfig.Sections() {
+				name := section.Name()
+				if name == "DEFAULT" {
+					continue
+				}
+
+				if strings.HasPrefix(name, "profile ") {
+					profiles = append(profiles, strings.TrimPrefix(name, "profile "))
+				}
+			}
+		}
+	}
+
+	if _, err := os.Stat(credentialsPath); err == nil {
+		awsCredentials, err := ini.Load(credentialsPath)
+		if err == nil {
+			for _, section := range awsCredentials.Sections() {
+				name := section.Name()
+				if name == "DEFAULT" {
+					continue
+				}
+
+				exists := false
+				for _, p := range profiles {
+					if p == name {
+						exists = true
+						break
+					}
+				}
+
+				if !exists {
+					profiles = append(profiles, name)
+				}
+			}
+		}
+	}
+
+	if len(profiles) == 0 {
+		fmt.Println("No AWS profiles found. Using 'default'.")
+		return "default"
+	}
+
+	if len(profiles) == 1 {
+		fmt.Printf("Using AWS profile: %s\n", profiles[0])
+		return profiles[0]
+	}
+
+	sort.Strings(profiles)
+
+	fmt.Println("Available AWS profiles:")
+	for i, p := range profiles {
+		fmt.Printf("%d. %s\n", i+1, p)
+	}
+
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("\nSelect profile number (or press Enter for 'default'): ")
+	input, err := reader.ReadString('\n')
+	input = strings.TrimSpace(input)
+
+	if input == "" {
+		return "default"
+	}
+
+	num, err := strconv.Atoi(input)
+	if err != nil || num < 1 || num > len(profiles) {
+		fmt.Println("Invalid selection. Using 'default'.")
+		return "default"
+	}
+
+	selectedProfile := profiles[num-1]
+	fmt.Printf("Using AWS profile: %s\n", selectedProfile)
+	return selectedProfile
+}
+
 func (a *App) Run() error {
 	ctx := context.Background()
 
@@ -126,13 +214,10 @@ func (a *App) Run() error {
 
 	cmd := exec.Command("aws", "ssm", "start-session",
 		"--target", *instance.InstanceId,
+		"--profile", a.config.Profile,
 		"--document-name", a.config.Document,
 		"--region", a.awsClient.Config.Region,
 	)
-
-	if a.config.Profile != "default" {
-		cmd.Args = append(cmd.Args, "--profile", a.config.Profile)
-	}
 
 	if a.config.Command != "" && a.config.Command != "bash" {
 		cmd.Args = append(cmd.Args, "--parameters", fmt.Sprintf("command='%s'", a.config.Command))

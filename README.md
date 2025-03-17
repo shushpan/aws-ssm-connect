@@ -74,6 +74,17 @@ aws-ssm-connect --version
 - `-v, --version`: Show version information
 - `-h, --help`: Display help information
 
+### AWS Profile Selection
+
+If you don't specify a profile with the `-p` flag, the tool will:
+
+1. Detect all available AWS profiles from your `~/.aws/config` and `~/.aws/credentials` files
+2. Display a list of available profiles
+3. Prompt you to select a profile by number
+4. Use the selected profile for the connection
+
+This makes it easy to switch between different AWS accounts without having to remember profile names.
+
 ## AWS SSO Support
 
 The tool automatically handles AWS SSO authentication if your profile is configured to use SSO. It will:
