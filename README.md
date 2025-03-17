@@ -43,9 +43,26 @@ make build
 
 ## Prerequisites
 
-- AWS CLI installed and configured
-- AWS SSM Plugin installed
-- Proper IAM permissions to use SSM
+- **AWS CLI** (v2+) - [Installation Guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+- **Session Manager Plugin** - [Installation Guide](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html) or `brew install session-manager-plugin` on macOS
+
+### AWS Configuration
+
+For SSO profiles, ensure your AWS config includes:
+```ini
+[profile your-profile]
+sso_start_url = https://your-sso-portal.awsapps.com/start
+sso_region = us-east-1
+region = us-east-1
+```
+
+### Required Permissions
+
+- Your IAM user/role needs: `ssm:StartSession`, `ssm:TerminateSession`, `ec2:DescribeInstances`
+- EC2 instances must have:
+  - SSM Agent installed
+  - IAM role with `AmazonSSMManagedInstanceCore` policy
+  - "Name" tag for identification
 
 ## Usage
 
