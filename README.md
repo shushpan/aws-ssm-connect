@@ -91,6 +91,8 @@ aws-ssm-connect --version
 - `-v, --version`: Show version information
 - `-h, --help`: Display help information
 
+You can omit the `-c` and `-d` flags, and the tool will use the default values.
+
 ### AWS Profile Selection
 
 If you don't specify a profile with the `-p` flag, the tool will:

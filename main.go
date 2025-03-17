@@ -28,6 +28,11 @@ import (
 	"gopkg.in/ini.v1"
 )
 
+const (
+	DefaultSSMDocument = "AWS-StartInteractiveCommand"
+	DefaultCommand     = "bash"
+)
+
 type Config struct {
 	Profile  string
 	TagName  string
@@ -91,6 +96,14 @@ func main() {
 				profile = selectAWSProfile()
 			}
 
+			if !cmd.Flags().Changed("command") {
+				command = DefaultCommand
+			}
+
+			if !cmd.Flags().Changed("document") {
+				document = DefaultSSMDocument
+			}
+
 			config := &Config{
 				Profile:  profile,
 				TagName:  args[0],
@@ -107,8 +120,8 @@ func main() {
 	}
 
 	rootCmd.Flags().StringVarP(&profile, "profile", "p", "default", "AWS profile name to use")
-	rootCmd.Flags().StringVarP(&command, "command", "c", "bash", "Command to execute on the instance")
-	rootCmd.Flags().StringVarP(&document, "document", "d", "AWS-StartInteractiveCommand", "SSM document name to use")
+	rootCmd.Flags().StringVarP(&command, "command", "c", "", fmt.Sprintf("Command to execute on the instance (default: %s)", DefaultCommand))
+	rootCmd.Flags().StringVarP(&document, "document", "d", "", fmt.Sprintf("SSM document name to use (default: %s)", DefaultSSMDocument))
 	rootCmd.Flags().BoolVarP(&showVersion, "version", "v", false, "Show version information")
 
 	if err := rootCmd.Execute(); err != nil {
@@ -212,15 +225,27 @@ func (a *App) Run() error {
 		return fmt.Errorf("failed to find instance: %w", err)
 	}
 
+	document := a.config.Document
+	if document == "" {
+		document = DefaultSSMDocument
+	}
+
+	command := a.config.Command
+	if command == "" {
+		command = DefaultCommand
+	}
+
 	cmd := exec.Command("aws", "ssm", "start-session",
 		"--target", *instance.InstanceId,
 		"--profile", a.config.Profile,
-		"--document-name", a.config.Document,
+		"--document-name", document,
 		"--region", a.awsClient.Config.Region,
 	)
 
-	if a.config.Command != "" && a.config.Command != "bash" {
-		cmd.Args = append(cmd.Args, "--parameters", fmt.Sprintf("command='%s'", a.config.Command))
+	if document == DefaultSSMDocument {
+		cmd.Args = append(cmd.Args, "--parameters", fmt.Sprintf("command='%s'", command))
+	} else if command != "" && command != DefaultCommand {
+		cmd.Args = append(cmd.Args, "--parameters", fmt.Sprintf("command='%s'", command))
 	}
 
 	cmd.Stdin = os.Stdin
